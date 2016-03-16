@@ -7,9 +7,9 @@ godeps:
 	GOPATH=`godep path` go get ${PKG}
 
 build: main.go
-	godep go build -o mounter main.go
+	godep go build -o daemonbox main.go
 
 clean:
-	rm -rf Godeps mounter
+	rm -rf Godeps daemonbox
 
-all: build
+all: godeps build

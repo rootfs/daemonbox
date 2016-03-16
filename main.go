@@ -1,45 +1,64 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/codegangsta/negroni"
 	"github.com/gorilla/mux"
 	"github.com/unrolled/render"
 )
 
-type Mounter struct {
-	Name string
-}
-
 func InfoHandler(res http.ResponseWriter, req *http.Request) {
-	var m Mounter
-	m.Name = "glusterfs"
+	info := "This is a daemonbox"
 
 	r := render.New(render.Options{})
-	r.JSON(res, 200, m)
+	r.JSON(res, 200, info)
 
 }
 
-func MountHandler(res http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	t := vars["type"]
-	src := vars["src"]
-	dest := vars["dest"]
-	opt := vars["opt"]
-	println("mount", "-t", t, src, dest, opt)
-
-	r := render.New(render.Options{})
-	cmd := exec.Command("mount", "-t", t, src, dest, "-o", opt)
-	output, err := cmd.CombinedOutput()
+func CmdHandler(res http.ResponseWriter, req *http.Request) {
 	st := 200
+	vars := mux.Vars(req)
+	c := vars["cmd"]
+	println(c)
+	r := render.New(render.Options{})
+	cmd := exec.Command(c)
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		st = 400
 		fmt.Printf("%v", string(output))
 	}
+
+	r.JSON(res, st, string(output))
+
+}
+
+func CmdArgHandler(res http.ResponseWriter, req *http.Request) {
+	st := 200
+	vars := mux.Vars(req)
+	r := render.New(render.Options{})
+	c := vars["cmd"]
+	arg := vars["arg"]
+	argStr, err := base64.URLEncoding.DecodeString(arg)
+	if err != nil {
+		st = 400
+		fmt.Printf("bad arg %v", err)
+		r.JSON(res, st, err.Error())
+		return
+	}
+	argArr := strings.Fields(string(argStr))
+	println(c, argArr)
+	cmd := exec.Command(c, argArr...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		st = 400
+	}
+	fmt.Printf("%v", string(output))
 
 	r.JSON(res, st, string(output))
 
@@ -55,7 +74,8 @@ func main() {
 
 	// define RESTful handlers
 	r.Path("/info").Methods("GET").HandlerFunc(InfoHandler)
-	r.Path("/mount/type={type}/src={src}/dest={dest}/opt={opt}").Methods("GET").HandlerFunc(MountHandler)
+	r.Path("/cmd/{cmd}/").Methods("GET").HandlerFunc(CmdHandler)
+	r.Path("/cmd/{cmd}/{arg}").Methods("GET").HandlerFunc(CmdArgHandler)
 
 	n := negroni.New(negroni.NewLogger())
 
