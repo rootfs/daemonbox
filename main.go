@@ -52,7 +52,7 @@ func CmdArgHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	argArr := strings.Fields(string(argStr))
-	println(c, argArr)
+	println(c, string(argStr))
 	cmd := exec.Command(c, argArr...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -74,7 +74,7 @@ func main() {
 
 	// define RESTful handlers
 	r.Path("/info").Methods("GET").HandlerFunc(InfoHandler)
-	r.Path("/cmd/{cmd}/").Methods("GET").HandlerFunc(CmdHandler)
+	r.Path("/cmd/{cmd}").Methods("GET").HandlerFunc(CmdHandler)
 	r.Path("/cmd/{cmd}/{arg}").Methods("GET").HandlerFunc(CmdArgHandler)
 
 	n := negroni.New(negroni.NewLogger())
